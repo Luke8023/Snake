@@ -1,0 +1,436 @@
+%WELCOME TO SNAKE!! HAVE FUN ;)
+%Copy and paste into TURING
+%Programming Game: SNAKE
+%Object: Use your snake to eat balls without crashing into walls or the snake.
+%--------------------------------------------------------------------------
+proc mouse_button_up
+    var mx, my, mb : int := 0
+    loop
+        mousewhere (mx, my, mb)
+        if mb = 0 then
+            exit
+        end if
+    end loop
+end mouse_button_up
+%------------------------------------------------------------------------
+%to choose mode
+    process startmusic
+    loop
+    Music.PlayFile ("Main Menu.mp3")
+    end loop
+    end startmusic
+    
+    
+function start_up : string
+    setscreen ("graphics:max,max;nobuttonbar")
+    drawfillbox (0, 0, maxx, maxy, 7)
+    var chars : array char of boolean
+    var snake_font : int
+    var mx, my, mb : int := 0
+    var difficulty : string := "-"
+    var mode : string := "-"
+    var modecover: int
+    var gamecover: int
+    var snake_fontnew : int
+
+    snake_fontnew := Font.New ("Impact:50")
+    gamecover := Pic.FileNew ("cover.jpg")
+    Pic.Draw (gamecover, 0, 0, picCopy)
+    View.Update
+    snake_font := Font.New ("Small Fonts:40:bold")
+  
+    delay (3000)
+    cls
+    drawfillbox (0, 0, maxx, maxy, 7)
+ 
+    modecover := Pic.FileNew ("modecover.jpg")
+    Pic.Draw (modecover, 0, 0, picCopy)
+    View.Update
+   
+    Font.Draw ("Try to block the other snake! ",100, 800, snake_font,white) 
+    Font.Draw ("Get the fruits to make your snake longer!",100, 700, snake_font, white)
+    Font.Draw ("Use arrows as Player 1!",100, 600, snake_font, white)
+    Font.Draw ( "Use 'WASD' as player 2!", 100, 500, snake_font, white) 
+    Font.Draw ( "Are you ready?", 100, 400, snake_font, white)
+    Font.Draw ("Yaaa!", 600, 200, snake_fontnew, purple)
+    loop
+        Input.KeyDown(chars)
+        mousewhere (mx, my, mb)
+        locate (1, 1)
+        put mx, my
+        
+        if mb = 1 and mx > 590 and mx < 720 and my > 200 and my < 260 or chars ('y')then
+            mode := "continue"
+            mouse_button_up
+            cls
+            drawfillbox (0, 0, maxx, maxy, 7)
+            exit
+        end if
+    end loop
+    result mode
+end start_up
+%------------------------------------------------------------------------------------
+%to choose difficulty
+function difficulty : string
+    var level : string := "-"
+    var snake_fontnew : int
+    var mx, my, mb : int := 0
+    var chars : array char of boolean
+    var difficultycover: int
+    difficultycover := Pic.FileNew ("Background2.jpg")
+    Pic.Draw (difficultycover, 0, 0, picCopy)
+    View.Update
+    snake_fontnew := Font.New ("Impact:50")
+    Font.Draw ("Choose a difficulty:", 50, 640, snake_fontnew, black)
+    Font.Draw ("NOOB", 100, 500, snake_fontnew, green)
+    Font.Draw ("AVERAGE", 330, 400, snake_fontnew, yellow)
+    Font.Draw ("EXPERT", 600, 300, snake_fontnew, 41)
+    Font.Draw ("IMPOSSIBLE", 800, 200, snake_fontnew, red)
+    loop
+      
+        mousewhere (mx, my, mb)
+        locate (1, 1)
+        put mx, my
+        
+        Input.KeyDown(chars)
+        if mb = 1 and mx > 85 and mx < 260 and my > 495 and my < 560 or chars ('n')then
+            level := "noob"
+            cls
+            drawfillbox (0, 0, maxx, maxy, 7)
+            exit
+        elsif mb = 1 and mx > 310 and mx < 580 and my > 380 and my < 470 or chars ('a')then
+            level := "average"
+            cls
+            drawfillbox (0, 0, maxx, maxy, 7)
+            exit
+        elsif mb = 1 and mx > 590 and mx < 800 and my > 299 and my < 365 or chars ('e')then
+            level := "expert"
+            cls
+            drawfillbox (0, 0, maxx, maxy, 7)
+            exit
+        elsif mb = 1 and mx > 790 and mx < 1135 and my > 200 and my < 265 or chars ('i')then
+            level := "impossible"
+            cls
+            drawfillbox (0, 0, maxx, maxy, 7)
+            exit
+        end if
+    end loop
+    result level
+end difficulty
+%---------------------------------------------------------------------
+%writes the body of the program(drawing snake and collecting items)
+function drawsnake (mode, level : string) : int
+   
+    const midx := maxx div 2
+    const midy := maxy div 2
+      %x,y only work for the single player, change x y into x1 y1, and find snakex snake y and double them
+    var snake_length1 := 50
+    var snake_length2 := 50
+    var enemyx : int
+    var enemyy : int
+    var snakex1 : flexible array 1 .. snake_length1 of int
+    var snakey1 : flexible array 1 .. snake_length1 of int
+    var snakex2 : flexible array 1 .. snake_length2 of int
+    var snakey2 : flexible array 1 .. snake_length2 of int
+    var chars : array char of boolean
+    var new_upper1 : int := upper (snakex1)
+    var last_upper1 : int := 0
+     var new_upper2 : int := upper (snakex2)
+    var last_upper2 : int := 0
+    var ball_count : int := 0
+    var enemy_count : int := 0
+    var speed : int :=5   %how fast the snake goes
+    var points : int %how much the score goes up by
+    var score : int := 0     %total points
+    var dirx : int := 3 
+    var diry : int := 0
+    var ballx, bally : int
+    var ball : string := "not drawn"
+    var enemy : string := "not drawn"
+    var baddies : boolean := false
+    var direction : string := "right"
+    var play_again_font : int
+    var game_over_font : int
+    var gaming1: int
+  
+    var snake1win: int
+    var snake2win: int
+    gaming1 := Pic.FileNew ("gaming1.jpg")
+    Pic.Draw (gaming1, 0, 0, picCopy)
+    View.Update
+
+    play_again_font := Font.New ("serif:0")
+    game_over_font := Font.New ("impect:50")
+    for i : 1 .. upper (snakex1)     %initializes array
+        snakex1 (i) := 0
+        snakey1 (i) := 0
+    end for
+     for i : 1 .. upper (snakex2)     %initializes array
+        snakex2 (i) := 0
+        snakey2 (i) := 0
+    end for
+
+
+    if mode = "continue" then
+            var mx, my, mb : int := 0
+            var x2 : int := midx - 50
+            var y2 : int := midy 
+            var x1 : int := midx +50
+            var y1 : int := midy 
+            var speed2 : int := 0
+            var direction2 : string := "left"
+            var direction1 : string := "right"
+            var dirx2 : int := -3
+            var diry2 : int := 0
+            var dirx1 : int := 3
+            var diry1 : int := 0         
+            loop
+            
+            if level = "noob" then
+                speed := 9
+                points := 2
+            elsif level = "average" then
+                speed := 7
+                points := 4
+            elsif level = "expert" then
+                speed := 6
+                points := 7
+                baddies := true
+            elsif level = "impossible" then
+                speed := 3
+                points := 10
+                baddies := true
+            end if
+            
+            if ball = "not drawn" then %draw balls
+                loop
+                    randint (ballx, 5, maxx - 5)
+                    randint (bally, 5, maxy - 5)
+                    if whatdotcolour (ballx, bally) not = 10 then
+                        drawfilloval (ballx, bally, 3, 3, 14)
+                        ball := "drawn"
+                    end if
+                    exit when ball = "drawn"
+                end loop
+            end if
+            if sqrt ((ballx - x1) ** 2 + (bally - y1) ** 2) < 9  then     %checks if it eats ball
+                drawfilloval (ballx, bally, 5, 5, 7)
+                ball_count += 1
+                enemy_count += 1
+                score += points     %adds to score
+                ball := "not drawn"   % makes ball not drawn so it know to draw a new one
+                enemy := "not drawn"
+                last_upper1 := new_upper1     %keeps record of last and new upper bounds of the arrays to initialize new elements
+                new_upper1 += 15     % adds elements to array
+                new snakex1, new_upper1
+                new snakey1, new_upper1
+                for i : last_upper1 + 1 .. new_upper1     %initializes new array values to 0
+                    snakex1 (i) := 0
+                    snakey1 (i) := 0
+                end for
+                
+            end if
+            
+             if sqrt ((ballx - x2) ** 2 + (bally - y2) ** 2) < 9  then     %checks if it eats ball
+                drawfilloval (ballx, bally, 5, 5, 7)
+                ball_count += 1
+                enemy_count += 1
+                score += points     %adds to score
+                ball := "not drawn"   % makes ball not drawn so it know to draw a new one
+                enemy := "not drawn"
+                last_upper2 := new_upper2     %keeps record of last and new upper bounds of the arrays to initialize new elements
+                new_upper2 += 15     % adds elements to array
+                new snakex2, new_upper2
+                new snakey2, new_upper2
+                for i : last_upper2 + 1 .. new_upper2     %initializes new array values to 0
+                    snakex2 (i) := 0
+                    snakey2 (i) := 0
+                end for
+                
+            end if
+           
+           
+             % draws enemies
+            if enemy = "not drawn" and baddies = true then 
+                loop
+                    randint (enemyx, 10, maxx-10)
+                    randint (enemyy, 10, maxy-10)
+                    if whatdotcolour (enemyx, enemyy) not = 10 and whatdotcolour (enemyx, enemyy) not = 14 then
+                        drawfilloval (enemyx, enemyy, 5, 5, red)
+                        enemy := "drawn"
+                    end if
+                    exit when enemy = "drawn"
+                end loop
+            end if
+            for decreasing i : upper (snakex1) .. 2     % changes places of array
+                snakex1 (i) := snakex1 (i - 1)
+                snakey1 (i) := snakey1 (i - 1)
+            end for
+            snakex1 (1) := x1     %sets x,y to the array
+            snakey1 (1) := y1
+             
+            for decreasing i : upper (snakex2) .. 2     % changes places of array
+                snakex2 (i) := snakex2 (i - 1)
+                snakey2 (i) := snakey2 (i - 1)
+            end for
+            snakex2 (1) := x2     %sets x,y to the array
+            snakey2 (1) := y2
+            
+            drawfilloval (x1, y1, 5, 5, 0)   
+            drawfilloval (x2, y2, 5, 5, 10)      %draws snake
+            drawfilloval (snakex1 (upper (snakex1)), snakey1 (upper (snakey1)), 5, 5, black)   
+            drawfilloval (snakex2 (upper (snakex2)), snakey2 (upper (snakey2)), 5, 5, black)    %erases snake
+            Input.KeyDown (chars)
+            
+            
+            if level = "noob" then
+                speed2 := 15
+            elsif level = "average" then
+                speed2 := 9
+            elsif level = "expert" then
+                speed2 := 6
+            elsif level = "impossible" then
+                speed2 := 3
+            end if        
+            %checks if snake2 crashes:
+            if x2 < 0 or x2 > maxx or y2 < 0 or y2 > maxy or direction2 = "up" and whatdotcolour (x2, y2 + 6) = 10 or direction2 = "up" and whatdotcolour (x2, y2 + 6) = 0 or direction2 = "right" and whatdotcolour (x2 + 6, y2) = 10 or direction2 = "right" and whatdotcolour (x2 + 6, y2) = 0 or direction2 = "left" and whatdotcolour (x2 - 6, y2) = 10 or direction2 = "left" and whatdotcolour (x2 - 6, y2) = 0 or direction2 = "down" and whatdotcolour (x2, y2 - 6) = 10 or direction2 = "down" and whatdotcolour (x2, y2 - 6) = 0 then     
+                
+            delay(1000)
+                cls
+                
+   
+                drawfillbox (1, 1, maxx, maxy, 7)
+                snake1win := Pic.FileNew ("player1win.jpg")
+                Pic.Draw (snake1win, 0, 0, picCopy)
+                View.Update
+                Font.Draw ("Player 1 wins!", midx-250, midy+50, game_over_font, 0)
+                delay(2500)
+                cls
+                drawfillbox (1, 1, maxx, maxy, 7)
+                exit
+            %checks if snake1 crashes:
+            elsif x1 < 0 or x1 > maxx or y1 < 0 or y1 > maxy or direction1 = "up" and whatdotcolour (x1, y1 + 6) = 0 or direction1 = "up" and whatdotcolour (x1, y1 + 6) = 10 or direction1 = "right" and whatdotcolour (x1 + 6, y1) = 0 or direction1 = "right" and whatdotcolour (x1 + 6, y1) = 10 or direction1 = "left" and whatdotcolour (x1 - 6, y1) = 0 or direction1 = "left" and whatdotcolour (x1 - 6, y1) = 10 or direction1 = "down" and whatdotcolour (x1, y1 - 6) = 0 or direction1 = "down" and whatdotcolour (x1, y1 - 6) = 10  then    
+                delay(1000)
+                cls
+                 
+   
+                drawfillbox (1, 1, maxx, maxy, 7)
+                snake2win := Pic.FileNew ("player2win.jpg")
+                 Pic.Draw (snake2win, 0, 0, picCopy)
+                 View.Update
+                Font.Draw ("Player 2 wins!", midx-250, midy+50, game_over_font, 0)
+                delay(2500)
+                cls
+                drawfillbox (1, 1, maxx, maxy, 7)
+                exit 
+            end if
+            Input.KeyDown(chars)
+            %Snake 2 movement
+            if chars ('w') and direction2 not= "down" then     
+                diry2 := 3     
+                dirx2 := 0
+                direction2 := "up"  
+            elsif chars ('d') and direction2 not= "left" then
+                diry2 := 0
+                dirx2 := 3
+                direction2 := "right"
+            elsif chars ('a') and direction2 not= "right" then
+                diry2 := 0
+                dirx2 := -3
+                direction2 := "left"
+            elsif chars ('s') and direction2 not= "up" then
+                diry2 := -3
+                dirx2 := 0
+                direction2 := "down"
+            end if
+    
+            x2 += dirx2     %adds the direction to make snake1 move
+            y2 += diry2
+            drawfilloval (x2, y2, 5, 5, 10) 
+            %Snake 1 movement
+            if chars (KEY_UP_ARROW) and direction1 not= "down" then     
+                diry1 := 3     
+                dirx1 := 0
+                direction1 := "up"     
+            elsif chars (KEY_RIGHT_ARROW) and direction1 not= "left" then
+                diry1 := 0
+                dirx1 := 3
+                direction1 := "right"
+            elsif chars (KEY_LEFT_ARROW) and direction1 not= "right" then
+                diry1 := 0
+                dirx1 := -3
+                direction1 := "left"
+            elsif chars (KEY_DOWN_ARROW) and direction1 not= "up" then
+                diry1 := -3
+                dirx1 := 0
+                direction1 := "down"
+            end if
+            x1 += dirx1     %adds the direction to make snake2 move
+            y1 += diry1
+           
+            
+            drawfilloval (x1, y1, 5, 5, 0) 
+            delay (speed2)
+         end loop   
+        end if
+    result score         %makes the function = the score to use on game over screen
+end drawsnake
+%--------------------------------------------------------
+function game_over (score : int, mode : string) : string
+    const midx := maxx div 2
+    const midy := maxy div 2
+    var chars : array char of boolean
+    var mx, my, mb : int := 0
+    var game_over_font : int         %declares fonts
+    var lose_font : int
+    var play_again_font : int
+    var name : string
+    var play_again : string := "-"
+    var gameovercover:int
+    var againcover: int
+    gameovercover := Pic.FileNew ("back.jpg")
+    Pic.Draw (gameovercover, 0, 0, picCopy)
+    View.Update
+    game_over_font := Font.New ("serif:15")         %sets fonts
+    lose_font := Font.New ("impact:50")
+    play_again_font := Font.New ("impact:40")
+    Font.Draw (" Game   Over", midx - 200, midy, lose_font, white)
+    delay (1500)
+        cls
+        drawfillbox (1, 1, maxx, maxy, 7)
+        
+    againcover := Pic.FileNew ("background3.jpg")
+    Pic.Draw (againcover, 0, 0, picCopy)
+    View.Update
+    Font.Draw ("Wanna play again?", midx-250, midy+100, play_again_font, 0)
+    Font.Draw ("Please press 'y' or 'n' ", midx-250, midy+0, play_again_font, 0)
+    Font.Draw ("Yes", 425, 350, play_again_font, 0)
+    Font.Draw ("No", 650, 350, play_again_font, 0)
+    loop
+        Input.KeyDown(chars)
+        mousewhere (mx, my, mb)
+         if chars ('y')then
+            play_again := "yes"
+            exit
+        elsif  chars ('n')then
+            play_again := "no"
+            exit
+        end if
+    end loop
+    result play_again
+end game_over
+%--------------------------------------------------------
+% actual run phase:
+fork startmusic
+loop
+    var game_over_font : int
+    var mode : string := start_up
+    var score : int := drawsnake (mode, difficulty)
+    game_over_font := Font.New("serif:35")
+    if game_over (score, mode) = "no" then
+        cls
+        drawfillbox (1, 1, maxx, maxy, 7)       
+        Font.Draw ("Turn it off then", 400, 400, game_over_font, 0)     
+        exit
+    end if
+end loop
